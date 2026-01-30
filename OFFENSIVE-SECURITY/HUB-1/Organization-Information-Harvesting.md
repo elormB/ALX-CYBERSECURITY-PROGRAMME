@@ -193,3 +193,33 @@ pentester@kali-linux:~$ h8mail -t admin@example.com
 [+] Passwords found: 3                           # Cracked plaintext passwords available
 ```
 These tools allowed enumeration of personnel-related intelligence and validated whether organizational details appeared in third-party datasets.
+## 8. Findings and Risk Table
+
+| **Tools Used** | **Technique Type** | **Command(s) Executed** | **Key Output / Observed Result** | **Insight Gained** | **Risk Level** | **Recommended Action / Mitigation** |
+| --- | --- | --- | --- | --- | --- | --- |
+| `theHarvester` | Email & Company OSINT Enumeration | `theHarvester -d example.com -b all` | Found **5 public emails** and **8 subdomains** including sensitive hosts (`dev`, `staging`, `admin`, `ftp`) | Shows publicly discoverable employees and systems visible to attackers | **Medium** | Conduct OSINT cleanup: remove unused emails from internet-facing pages; restrict exposure of testing/development environments |
+| `theHarvester` | Reduced‑scope OSINT Enumeration | `theHarvester -d example.com -b google` | Smaller output: **3 emails**, **5 subdomains** | Verifies that more OSINT sources → more data leakage; Google alone missed assets | **Low–Medium** | Continue to monitor multiple OSINT sources; ensure DNS changes propagate intentionally |
+| `h8mail` | Bulk Corporate Email Enumeration & Breach Check | `h8mail -t example.com` | Identified **9 emails**, **7 were in breaches**. Discovered real employee names | Confirms staff identities and usernames are public + breached data usable for phishing | **High** | Implement password resets + MFA for all employees, security awareness training, remove personal emails from public space |
+| `h8mail` | Targeted Email Breach Validation | `h8mail -t admin@example.com` | Confirmed **3 historic breaches**, recovered weak reused passwords (`password123`, `welcome123`) | Demonstrates poor password hygiene and real compromise probability | **Critical** | Force immediate password rotation, enforce password policies (length + complexity), require MFA |
+
+## 9. Troubleshooting Actions Taken
+
+Where necessary during execution:
+
+- The Kali environment was verified
+- The active shell was confirmed using `echo $SHELL`
+- If not in `training-shell`, the setup script was relaunched
+- Hub status was re-checked using `running`
+
+---
+
+## 10. Conclusion
+
+This module provided practical experience in gathering organization-level intelligence using OSINT methodologies. Through the use of theHarvester and h8mail, the lab demonstrated how to identify:
+
+- Publicly listed organization emails
+- Employee names and roles
+- Potential data leakage through breach exposure
+- Metadata and external digital presence
+
+The skills acquired supported the broader reconnaissance methodology and formed a critical precursor to later phases such as target validation, vulnerability identification, social engineering, and exploitation.
