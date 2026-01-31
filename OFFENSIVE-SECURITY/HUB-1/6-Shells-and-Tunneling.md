@@ -220,6 +220,7 @@ Each tool reinforced a different access pattern commonly encountered in real off
 **Purpose:**
 The purpose of the lab was to demonstrate practical data exfiltration and secure remote communication techniques between an attacker machine and a victim host using Netcat, Telnet, and OpenSSL. The activity aimed to validate the capability to transfer files unencrypted and encrypted, generate and deploy certificates, and establish a secure OpenSSL-based reverse shell. 
 The purpose of the OpenSSL activity was to create, deploy, and utilize cryptographic certificates to establish encrypted communications between attacker and victim systems, and to securely transfer files and establish a protected reverse shell. The exercise aimed to demonstrate secure tunneling using OpenSSL instead of clear‑text tools like Netcat and Telnet.
+
 **Outcome:**
 The lab successfully established and executed multiple file transfer mechanisms across a networked environment. Files were transmitted from attacker to victim through Netcat and Telnet listeners, and OpenSSL was configured using generated key and certificate pairs to perform encrypted transfers. Finally, an encrypted reverse shell was launched from the victim to the attacker using OpenSSL, demonstrating secure command execution and proving that encrypted tunneling techniques functioned as intended.
 The OpenSSL activity successfully generated RSA private keys and certificates, transferred them to the victim machine, and established encrypted client–server communication channels. Files were transferred securely using OpenSSL s_server and s_client, and an encrypted reverse shell was created from the victim to the attacker, confirming OpenSSL's ability to protect data and command execution over the network.
@@ -302,6 +303,33 @@ secret.txt
 victim@target:~$ cat secret.txt                          # The received file was opened and displayedvto reveal the flag
 FLAG{advanced_netcat_file_transfer}
 
+```
+### 8.2.3 Advance netcat and file transfer techniques
+- Netcat was used to demonstrate a direct file transfer over a TCP connection between two Ubuntu Linux hosts on the same network. The victim machine initialized a listener on port 4444 and redirected all incoming data into a file named secret.txt. The attacker machine then connected to the victim’s listening port and transmitted the contents of secret.txt across the network. Upon connection, Netcat accepted the incoming stream and wrote the data directly to disk on the victim system, as confirmed by the appearance and contents of the file. This workflow validated Netcat’s ability to perform simple, unencrypted file transfers using port listening and input/output redirection.
+
+- Telnet was used to demonstrate an alternative approach to transferring file data through a raw TCP session. The victim machine started a Telnet listening service on port 4444 and redirected the incoming stream into secret.txt. The attacker machine then established a Telnet connection to the victim and streamed the file contents through the session. Once connected, the data sent from the attacker was written directly into the file on the victim system, which was verified by listing and viewing the file contents. This process validated Telnet’s capability to carry plain data streams for file transfer using basic terminal-based network communication.
+
+- OpenSSL was used to demonstrate secure file transfer over an encrypted SSL/TLS channel between the two hosts. A self-signed certificate and private key were first generated on the attacker machine and transferred to the victim using Netcat. The victim then initiated an OpenSSL server on port 4444 using the transferred certificate and key, redirecting decrypted incoming data into secret.txt. The attacker connected to this encrypted listener using the OpenSSL client and transmitted the file contents securely across the network. Although the transfer status was not displayed due to the quiet mode, the presence of secret.txt on the victim confirmed a successful encrypted transfer. This workflow validated OpenSSL’s role in enabling confidential data transmission and secure communication over network sockets.
+```bash
+Victim Machine (192.168.56.210)
+Welcome to Ubuntu 18.04.6 LTS (GNU/Linux 4.15.0-147-generic x86_64)
+victim@target:~$
+victim@target:~$ ls
+
+Victim Machine (192.168.56.210)
+Welcome to Ubuntu 18.04.6 LTS (GNU/Linux 4.15.0-147-generic x86_64)
+victim@target:~$
+victim@target:~$ nc -l -p 4444 > secret.txt
+# netcat was used to start a listener on port 4444 and redirect incoming data to secret.txt
+
+Listening on [0.0.0.0] (family 0, port 4444)
+```
+```bash
+pentester@kali-linux:~$ ls
+secret.txt
+pentester@kali-linux:~$ nc 192.168.56.210 4444 < secret.txt
+File transfer completed to 192.168.56.210:4444
+# Attacker transfered secret.txt to victim machine via port 4444 using netcat
 ```
 ## 9. Findings and Risk Table
 | **Tool Used** | **Technique Type** | **Command(s) Executed** | **Key Output / Observed Result** | **Insight Gained** | **Risk Level** | **Lessons Learned** | **Recommended Action / Mitigation** | **Conclusion** |
