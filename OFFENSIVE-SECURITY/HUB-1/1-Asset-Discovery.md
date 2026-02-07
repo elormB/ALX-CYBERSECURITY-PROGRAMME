@@ -466,7 +466,6 @@ cd ~/lab
 
 ```bash
 running
-
 ```
 
 4.  Ensure Kali VM is active
