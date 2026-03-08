@@ -8,7 +8,7 @@ A **shell** is a command-line interface that provides direct access to an oper
 
 The Shells and Tunneling challenge hub introduced practical offensive security techniques used to gain and maintain system access during penetration testing. The lab environment simulated vulnerable systems where various shell access methods could be executed, allowing structured hands‑on practice while reinforcing theoretical concepts learned earlier. The hub demonstrated how attackers establish command execution channels, evade network restrictions, and pivot through internal networks by tunneling traffic.
 
-## 2. Objective
+## 2. Objectives
 
 - The primary objective of this practical was to establish working proficiency in creating functional shells and building secure tunnels.
 - The tasks focused on learning how to gain command-line access using different connection patterns, transfer data through restricted environments, and maintain control over compromised hosts.
