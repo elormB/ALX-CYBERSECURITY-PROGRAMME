@@ -10,6 +10,7 @@ The Shells and Tunneling challenge hub introduced practical offensive security t
 
 ## 2. Objectives
 
+
 - The primary objective of this practical was to establish working proficiency in creating functional shells and building secure tunnels.
 - The tasks focused on learning how to gain command-line access using different connection patterns, transfer data through restricted environments, and maintain control over compromised hosts.
 - The challenge also reinforced understanding of how network constraints limit payload execution and how tunneling tools overcome those barriers.
