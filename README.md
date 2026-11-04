@@ -35,8 +35,8 @@ ALX-CYBERSECURITY-PROGRAMME/
 │
 ├── OFFENSIVE-SECURITY/
 │   │
-│   ├── HUB-1/
-│   │   ├── 1-Asset-Discovery.md
+│   ├── [HUB-1](./OFFENSIVE-SECURITY/HUB-1/)/
+│   │   ├── [1-Asset-Discovery.md](./OFFENSIVE-SECURITY/HUB-1/1-Asset-Discovery.md)
 │   │   ├── 2-Organization-Information-Harvesting.md
 │   │   ├── 3-Service-Interaction.md
 │   │   ├── 4-OSINT-Framework.md
