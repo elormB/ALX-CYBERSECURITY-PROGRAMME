@@ -1,0 +1,186 @@
+# Wireless Networks Lab
+## 1. Background
+Wireless networks are widely used in homes, businesses, and public environments to provide convenient and flexible connectivity without the need for physical cabling. However, because wireless communication is transmitted through radio waves, it is inherently more exposed to unauthorized access and interception than wired networks. Weak encryption, insecure configurations, hidden SSIDs, and vulnerable features such as Wi-Fi Protected Setup (WPS) can create opportunities for attackers to gain unauthorized access to a network.
+
+Wireless security testing is the process of identifying and assessing weaknesses in wireless networks to determine whether a wireless network is adequately protected. In this lab, a controlled environment is used to simulate common wireless security assessment techniques, including Wi-Fi discovery, monitoring, WPS analysis, hidden network detection, and advanced wireless reconnaissance. Tools commonly used in Kali Linux such as Aircrack-ng, wash, and airodump-ng help security professionals detect insecure configurations and evaluate the effectiveness of wireless security controls. The practical exercises demonstrate how attackers may enumerate wireless networks and how organizations can strengthen their defenses against unauthorized access.
+
+## 2. Objective
+The Objective of this lab is to understand how to perform comprehensive wireless security assessments including:
+
+- discovering nearby Wi-Fi networks,
+- monitoring wireless traffic,
+- evaluating Wi-Fi Protected Setup (WPS) security,
+- detecting hidden networks, and
+- performing advanced wireless reconnaissance techniques.
+
+## 3. Scope and Limitation
+### Scope
+1. This lab focuses exclusively on the activities under the Wireless Security Testing section of the challenge hub.
+2. The assessment is performed within a controlled and isolated training environment and covers the following areas: `WiFi Discovery and Monitoring, WPS Security Analysis, Hidden Network Detection, and Advanced Wireless Security Assessment.`
+3. The practical exercises include discovering wireless networks, monitoring beacon and probe traffic, identifying encryption and authentication methods, assessing Wi-Fi Protected Setup (WPS) configurations, and detecting networks with hidden SSIDs.
+
+### Limitations
+
+  1. The lab is restricted to the simulated wireless environment provided in the training platform and does not involve testing real-world or unauthorized wireless networks.
+  2. The results may differ from production environments due to factors such as signal strength variations, channel interference, hardware capabilities, and enterprise-specific security configurations.
+  3. Additionally, only the tools and scenarios included in the challenge hub are evaluated, and the findings are intended solely for educational and authorized security training purposes.
+
+## 4. Legal and Ethical Disclaimer
+
+1. This lab is conducted strictly within an authorized training environment for educational and defensive security purposes.
+2. The wireless security testing techniques demonstrated—including Wi-Fi discovery, monitoring, WPS analysis, and hidden network detection—must only be performed on systems and networks for which explicit permission has been granted.
+3. Unauthorized interception, monitoring, or testing of wireless communications may violate privacy laws, organizational policies, and regulatory requirements.
+4. All activities in this lab are intended to help learners understand how wireless networks can be assessed for security weaknesses so that appropriate protections can be implemented.
+5. The knowledge and tools presented should be used responsibly to strengthen wireless security, protect sensitive information, and support ethical cybersecurity practices.
+
+## 5. Lab Initialization and Access
+
+To begin the practical, the lab was confirmed to be active and accessible:
+
+1. The training-shell terminal was launched and Hub 3 was started.
+2. The running command was executed to validate that the environment was live: running # expected output: ```hub-3 running```
+3. The browser was opened and the interface was accessed via http://localhost
+4. Navigation proceeded to the Wireless Network Lab section.
+5. All the required tasks were initiated and completed.
+
+## 6. Challenge Overview
+
+This lab consists of four practical challenges designed to build hands-on skills in wireless security testing and vulnerability assessment:
+
+**1. WiFi Discovery and Monitoring Challenge**
+
+Learn how to discover nearby wireless networks, identify access points, monitor beacon frames, and collect information such as SSIDs, BSSIDs, channels, and signal strength.
+
+**2. WPS Security Analysis Challenge**
+
+Assess Wi-Fi Protected Setup (WPS) configurations to determine whether access points are vulnerable to PIN-based attacks or other WPS-related weaknesses.
+
+**3. Hidden Network Detection Challenge**
+
+Detect networks that suppress SSID broadcasting by analyzing probe requests, association traffic, and management frames.
+
+**4. Advanced Wireless Security Assessment**
+
+Perform comprehensive wireless reconnaissance by combining discovery, monitoring, WPS analysis, and hidden network detection techniques to evaluate the overall security posture of the wireless environment.
+
+These challenges provide a structured approach to understanding common wireless security weaknesses and the techniques used to identify and assess them in a controlled environment.
+
+## 7. Tools Used
+
+| Tool                             | Purpose                                                                                   |
+| -------------------------------- | ----------------------------------------------------------------------------------------- |
+| Kali Linux                       | Operating system and execution environment for all wireless security testing activities    |
+| Aircrack-ng suite                     | Comprehensive suite for wireless reconnaissance, monitoring, and security analysis         |
+| airodump-ng                      | Captures and displays nearby wireless networks, clients, channels, and encryption details  |
+| airmon-ng                        | Enables and manages wireless adapters in monitor mode                                     |
+| wash                             | Detects WPS-enabled access points and displays WPS configuration details                  |
+| iwconfig                         | Displays wireless interface settings and operational modes                                |
+| tcpdump                          | Captures and inspects wireless and network traffic for detailed analysis                  |
+| Web Browser (`http://localhost`) | Accesses the training challenge interface and lab instructions                            |
+
+## 8. Tasks Completed
+
+### 8.1 WiFi Discovery & Monitoring
+
+The purpose of this challenge is to develop practical skills in wireless network discovery and security assessment. It focuses on using tools from the Aircrack-ng to identify nearby wireless networks and analyze their security configurations.
+
+The `Aircrack-ng` suite is a collection of open-source tools designed for wireless network auditing and security testing. It is widely used by cybersecurity professionals and ethical hackers to assess the security of Wi-Fi networks by capturing packets, analyzing encryption protocols, and testing the strength of wireless passwords.
+
+The suite supports a range of functions including network discovery, packet capture, monitoring wireless traffic, and performing cryptographic analysis of captured data. It is commonly used in controlled environments to evaluate vulnerabilities in wireless configurations such as weak encryption (WEP/WPA/WPA2), misconfigured access points, and insecure authentication methods.
+
+Aircrack-ng consists of several command-line utilities that cover the entire security testing workflow for wireless networks. Tools like airmon-ng manage interfaces in monitor mode, airodump-ng captures packets, and aireplay-ng injects or replays traffic. The main component, aircrack-ng, performs key-cracking on captured WPA/WPA2 handshakes using dictionary or brute-force attacks.
+
+#### Aircrack-ng Suite Components
+
+| Component       | Function                                                                 | Command Syntax |
+|----------------|--------------------------------------------------------------------------|----------------|
+| aircrack-ng    | Cracks WEP/WPA/WPA2 keys using captured handshake files                | `aircrack-ng <capture-file>.cap -w <wordlist.txt>` |
+| airodump-ng    | Captures wireless traffic and displays nearby networks and clients     | `airodump-ng <interface>` |
+| airmon-ng      | Enables monitor mode on wireless interfaces                             | `airmon-ng start <interface>` |
+| aireplay-ng    | Performs packet injection and deauthentication attacks                  | `aireplay-ng --deauth <count> -a <BSSID> <interface>` |
+| airbase-ng     | Creates rogue/fake access points for testing                            | `airbase-ng -e <ESSID> -c <channel> <interface>` |
+| airolib-ng     | Builds and manages WPA/WPA2 password databases                          | `airolib-ng <database> --import passwd <wordlist.txt>` |
+| packetforge-ng | Crafts custom wireless packets for injection                            | `packetforge-ng -0 -a <BSSID> -h <source-mac> -k <dest-ip> -l <source-ip>` |
+
+```bash
+# Scenario presented by lab
+You are conducting a wireless security assessment for a client. Your task is to discover all wireless networks in the area and analyze their security configurations. Mission: Determine the correct commands that would produce these wireless discovery outputs.
+```
+
+```bash
+iwlist wlan0 scan
+airodump-ng wlan0mon
+airmon-ng start wlan0
+```
+
+### 8.2 WPS Security Analysis Challenge
+
+The purpose of this challenge is to develop practical skills in identifying and analyzing Wi-Fi Protected Setup (WPS) configurations within wireless networks.
+
+WPS (Wi-Fi Protected Setup) is a wireless network feature designed to make it easier to connect devices to a Wi-Fi network without manually entering a password.
+
+Instead of typing a long Wi-Fi passphrase, WPS allows devices to connect using methods such as:
+
+- A PIN code (usually 8 digits printed on the router)
+
+- A physical button (Push Button Configuration) on the router
+- NFC or USB methods (less common)
+
+While WPS was created for convenience, it has a major security weakness: the PIN-based method can be vulnerable to brute-force attacks, allowing attackers to potentially recover the Wi-Fi password if WPS is enabled and not properly protected. Because of this, security professionals often recommend disabling WPS on routers to reduce the risk of unauthorized access.
+
+#### WPS Testing Tools: `wash` and `reaver`
+#### wash (WPS reconnaisance tool)
+wash is a wireless reconnaissance tool included in the Aircrack-ng, specifically designed to identify access points with Wi-Fi Protected Setup (WPS) enabled. It works by scanning nearby wireless networks in monitor mode and extracting WPS-related information such as the BSSID (MAC address), signal strength, WPS version, manufacturer details, and lock status. One of its key functions is to determine whether WPS is active and whether the access point is vulnerable or protected against brute-force PIN attempts. By filtering and displaying only WPS-capable networks, wash helps security testers quickly identify potential targets for further analysis using tools like reaver. It is typically used as a reconnaissance tool in wireless security assessments to evaluate the exposure of networks to WPS-related vulnerabilities and to support secure configuration auditing.
+
+Example of command synthax
+```bash
+wash -i wlan0mon # `-i`used to capture wireless packets on an interface
+```
+
+#### reaver (WPS PIN attack tool)
+
+`reaver` is a wireless security testing tool included in the Aircrack-ng, designed specifically to exploit weaknesses in Wi-Fi Protected Setup (WPS). It works by performing a brute-force attack against the WPS PIN authentication mechanism of a wireless access point in order to recover the WPA/WPA2 passphrase. Reaver continuously attempts different PIN combinations while analyzing responses from the target router to determine valid authentication credentials. If the WPS implementation is weak or not properly locked after failed attempts, reaver may successfully retrieve the network password.
+
+Reaver is used to test the strength of WPS PIN protection and determine whether a router is vulnerable to PIN-based attacks.
+
+Example of command synthax
+```bash
+reaver -i wlan0mon -b <BSSID> -vv
+
+# Uses reaver to test a WPS-enabled access point by attempting to brute-force the WPS PIN
+# wlan0mon is the monitor mode interface, -b selects the target BSSID, -vv enables detailed output
+```
+
+```bash
+# Scenario presented by lab challenge
+During your wireless assessment, you need to identify access points with WPS enabled and assess their security posture for potential vulnerabilities. Mission: Determine the commands that would identify and analyze WPS configurations.
+```
+
+```bash
+wash -i wlan0mon
+reaver -i wlan0mon -b 00:1B:2F:1A:2B:3C -vv
+reaver -i wlan0mon -b 00:1B:2F:1A:2B:3C -K
+
+# -K enables Pixie-Dust attack (offline WPS PIN vulnerability test)
+```
+
+### 8.3 Hidden Network Detection Challenge
+
+The purpose of this challenge is to develop practical skills in detecting and analyzing hidden wireless networks. It focuses on using wireless security tools from the Aircrack-ng to identify access points that do not broadcast their SSIDs and to understand how they can still be discovered through wireless traffic analysis. The lab emphasizes beacon frame inspection, packet capture analysis, and deauthentication techniques to reveal hidden network information in a controlled environment.
+
+```bash
+# Scenario Presented by lab challenge
+Some networks hide their SSID to avoid detection, but this provides minimal security. Your task is to discover these hidden networks and reveal their SSIDs. Mission: Determine the commands needed to detect and reveal hidden wireless networks.
+```
+
+```bash
+#Answers to challenge
+# Capture traffic on channel 9 for a specific access point (BSSID) using monitor mode interface
+airodump-ng -c 9 --bssid 00:4E:5F:6A:7B:8C wlan0mon
+
+# Send 5 deauthentication packets to force a client to disconnect and reconnect (may reveal hidden SSID)
+aireplay-ng --deauth 5 -a 00:4E:5F:6A:7B:8C -c 11:22:33:44:55:66 wlan0mon
+
+# Analyze captured wireless traffic file for handshakes and network information
+aircrack-ng capture-01.cap
+```
